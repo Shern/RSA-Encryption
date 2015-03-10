@@ -21,10 +21,30 @@ namespace EncryptDecrypt
         private void GenerateButton_Click(object sender, RoutedEventArgs e)
         {
             var rsaKey = new RSACryptoServiceProvider() {PersistKeyInCsp = false};
-            //var keyPublicXml =  new XDocument(rsaKey.ToXmlString(false));
             KeySizeTextBlock.Text = rsaKey.KeySize.ToString();
             PublicKeyGenTextBox.Text = rsaKey.ToXmlString(false);
             PrivateKeyGenTextBox.Text = rsaKey.ToXmlString(true);
+        }
+
+        private void CopyPublicKeyButton_Click(object sender, RoutedEventArgs e)
+        {
+            Clipboard.SetText(PublicKeyGenTextBox.Text);
+        }
+
+        private void CopyPrivateKeyButton_Click(object sender, RoutedEventArgs e)
+        {
+            Clipboard.SetText(PrivateKeyGenTextBox.Text);
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog();
+            var result = dlg.ShowDialog();
+            if (result == true)
+            {
+                var filename = dlg.FileName;
+                FileToEncryptTextBox.Text = filename;
+            }
         }
     }
 }

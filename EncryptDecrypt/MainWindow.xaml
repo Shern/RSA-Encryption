@@ -8,12 +8,12 @@
                 <Grid Background="#FFE5E5E5">
                     <TextBox x:Name="PublicKeyGenTextBox" HorizontalAlignment="Left" Height="60" Margin="102,88,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" IsReadOnly="True" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
          ScrollViewer.VerticalScrollBarVisibility="Auto"/>
-                    <TextBlock HorizontalAlignment="Left" Margin="20,108,0,0" TextWrapping="Wrap" Text="Clé publique" VerticalAlignment="Top"/>
+                    <TextBlock HorizontalAlignment="Left" Margin="28,111,0,0" TextWrapping="Wrap" Text="Clé publique" VerticalAlignment="Top"/>
                     <TextBox x:Name="PrivateKeyGenTextBox" HorizontalAlignment="Left" Height="60" Margin="102,169,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" IsReadOnly="True" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
          ScrollViewer.VerticalScrollBarVisibility="Auto"/>
-                    <TextBlock HorizontalAlignment="Left" Margin="34,187,0,0" TextWrapping="Wrap" Text="Clé privée" VerticalAlignment="Top"/>
-                    <Button x:Name="CopyPublicKeyButton" Content="Copier" HorizontalAlignment="Left" Margin="674,109,0,0" VerticalAlignment="Top" Width="75"/>
-                    <Button x:Name="CopyPrivateKeyButton" Content="Copier" HorizontalAlignment="Left" Margin="674,188,0,0" VerticalAlignment="Top" Width="75"/>
+                    <TextBlock HorizontalAlignment="Left" Margin="20,176,0,0" TextWrapping="Wrap" VerticalAlignment="Top" TextAlignment="Right"><Run Text="Clés publique"/><LineBreak/><Run Text="et privée"/></TextBlock>
+                    <Button x:Name="CopyPublicKeyButton" Content="Copier" HorizontalAlignment="Left" Margin="674,109,0,0" VerticalAlignment="Top" Width="75" Click="CopyPublicKeyButton_Click"/>
+                    <Button x:Name="CopyPrivateKeyButton" Content="Copier" HorizontalAlignment="Left" Margin="674,188,0,0" VerticalAlignment="Top" Width="75" Click="CopyPrivateKeyButton_Click"/>
                     <Button x:Name="GenerateButton" Content="Générer" HorizontalAlignment="Left" Margin="325,258,0,0" VerticalAlignment="Top" Width="160" Height="65" FontSize="22" Click="GenerateButton_Click"/>
                     <TextBlock HorizontalAlignment="Left" Margin="29,372,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="48" Width="721" FontSize="14"><Run Text="Attention à bien noter la clé privée de façon sécuritaire et mettre la clé publique sur la page app"/><Run Text="ropriée "/><Run Text="du site Web"/></TextBlock>
                     <TextBlock HorizontalAlignment="Left" Margin="325,328,0,0" TextWrapping="Wrap" Text="Taille de la clé :" VerticalAlignment="Top"/>
@@ -22,7 +22,16 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Chiffrer">
-                <Grid Background="#FFE5E5E5"/>
+                <Grid Background="#FFE5E5E5">
+                    <TextBox x:Name="FileToEncryptTextBox" HorizontalAlignment="Left" Height="23" Margin="117,69,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558"/>
+                    <TextBlock HorizontalAlignment="Left" Margin="22,73,0,0" TextWrapping="Wrap" Text="Fichier à chiffrer :" VerticalAlignment="Top" Height="19" TextAlignment="Right"/>
+                    <Button Content="Ouvrir" HorizontalAlignment="Left" Margin="680,69,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click" Height="23"/>
+                    <TextBox x:Name="PublicKeyEncryptTextBox" HorizontalAlignment="Left" Height="60" Margin="116,125,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+                    <TextBlock HorizontalAlignment="Left" Margin="21,135,0,0" TextWrapping="Wrap" Text="Clé publique du destinataire :" VerticalAlignment="Top" Width="90" TextAlignment="Right"/>
+                    <TextBox x:Name="PrivateKeyEncryptTextBox" HorizontalAlignment="Left" Height="60" Margin="116,212,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+                    <TextBlock HorizontalAlignment="Left" Margin="9,233,0,0" TextWrapping="Wrap" Text="Votre clé privée :" VerticalAlignment="Top" Height="19" Width="102" TextAlignment="Right"/>
+                    <Button Content="Chiffrer" HorizontalAlignment="Left" Margin="336,295,0,0" VerticalAlignment="Top" Width="138" Height="41" FontSize="18"/>
+                </Grid>
             </TabItem>
             <TabItem Header="Déchiffrer">
                 <Grid Background="#FFE5E5E5"/>
