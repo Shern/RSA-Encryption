@@ -25,12 +25,12 @@
                 <Grid Background="#FFE5E5E5">
                     <TextBox x:Name="FileToEncryptTextBox" HorizontalAlignment="Left" Height="23" Margin="117,69,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558"/>
                     <TextBlock HorizontalAlignment="Left" Margin="22,73,0,0" TextWrapping="Wrap" Text="Fichier à chiffrer :" VerticalAlignment="Top" Height="19" TextAlignment="Right"/>
-                    <Button Content="Ouvrir" HorizontalAlignment="Left" Margin="680,69,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click" Height="23"/>
+                    <Button x:Name="OpenFileEncryptButton" Content="Ouvrir" HorizontalAlignment="Left" Margin="680,69,0,0" VerticalAlignment="Top" Width="75" Click="OpenFileEncryptButton_Click" Height="23"/>
                     <TextBox x:Name="PublicKeyEncryptTextBox" HorizontalAlignment="Left" Height="60" Margin="116,125,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
                     <TextBlock HorizontalAlignment="Left" Margin="21,135,0,0" TextWrapping="Wrap" Text="Clé publique du destinataire :" VerticalAlignment="Top" Width="90" TextAlignment="Right"/>
                     <TextBox x:Name="PrivateKeyEncryptTextBox" HorizontalAlignment="Left" Height="60" Margin="116,212,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
                     <TextBlock HorizontalAlignment="Left" Margin="9,233,0,0" TextWrapping="Wrap" Text="Votre clé privée :" VerticalAlignment="Top" Height="19" Width="102" TextAlignment="Right"/>
-                    <Button Content="Chiffrer" HorizontalAlignment="Left" Margin="336,295,0,0" VerticalAlignment="Top" Width="138" Height="41" FontSize="18"/>
+                    <Button x:Name="EncryptButton" Content="Chiffrer" HorizontalAlignment="Left" Margin="336,295,0,0" VerticalAlignment="Top" Width="138" Height="41" FontSize="18" Click="EncryptButton_Click"/>
                 </Grid>
             </TabItem>
             <TabItem Header="Déchiffrer">
