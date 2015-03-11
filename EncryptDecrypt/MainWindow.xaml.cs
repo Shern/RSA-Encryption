@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Policy;
 using System.Windows;
@@ -11,8 +13,8 @@ namespace EncryptDecrypt
     /// </summary>
     public partial class MainWindow : Window
     {
-        private const string encryptFolder = @"C:\RSA\Encrypt\";
-        private const string decryptFolder = @"C:\RSA\Decrypt\";
+        private const string EncryptFolder = @"C:\RSA\Encrypt\";
+        private const string DecryptFolder = @"C:\RSA\Decrypt\";
 
         public MainWindow()
         {
@@ -44,21 +46,17 @@ namespace EncryptDecrypt
 
         private void OpenFileEncryptButton_Click(object sender, RoutedEventArgs e)
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog();
-            var result = dlg.ShowDialog();
-            if (result == true)
-            {
-                var filename = dlg.FileName;
-                FileToEncryptTextBox.Text = filename;
-            }
+            FileToEncryptTextBox.Text = GetFileName();
         }
 
         private void EncryptButton_Click(object sender, RoutedEventArgs e)
         {
+            ResultEncryptTextBox.Text = "";
             var filePath = FileToEncryptTextBox.Text;
             if (filePath.Equals(""))
             {
                 MessageBox.Show("Pas de fichier sélectionné", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+                ResultEncryptTextBox.Text = "Échec";
                 return;
             }
             var privateKey = new RSACryptoServiceProvider();
@@ -69,41 +67,47 @@ namespace EncryptDecrypt
             catch (System.Security.XmlSyntaxException)
             {
                 MessageBox.Show("Clé privée invalide.", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+                ResultEncryptTextBox.Text = "Échec";
                 return;
             }
             var publicKey = new RSACryptoServiceProvider();
             try
             {
-                publicKey.FromXmlString(PublicKeyGenTextBox.Text);
+                publicKey.FromXmlString(PublicKeyEncryptTextBox.Text);
             }
             catch (System.Security.XmlSyntaxException)
             {
                 MessageBox.Show("Clé publique invalide.", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+                ResultEncryptTextBox.Text = "Échec";
                 return;
             }
-            var file = File.ReadAllBytes(FileToEncryptTextBox.Text);
-            HashFile(privateKey, file);
-            EncryptFile(privateKey, FileToEncryptTextBox.Text);
+            
+            var startFileName = filePath.LastIndexOf("\\") + 1;
+            var folderName = EncryptFolder +
+                             filePath.Substring(startFileName, filePath.LastIndexOf(".") - startFileName) + @"\";
+            Directory.CreateDirectory(folderName);
+            HashFile(privateKey, filePath, folderName);
+            EncryptFile(publicKey, FileToEncryptTextBox.Text, folderName);
         }
 
-        private static void HashFile(RSACryptoServiceProvider privateKey, byte[] fileBytes)
+        private static void HashFile(RSACryptoServiceProvider privateKey, string file, string folderName)
         {
+            var fileBytes = File.ReadAllBytes(file);
             SHA256 sha256 = new SHA256Managed();
             var hashedFile = sha256.ComputeHash(fileBytes);
             var rsaFormatter = new RSAPKCS1SignatureFormatter(privateKey);
             rsaFormatter.SetHashAlgorithm("SHA256");
             var signedHashedValue = rsaFormatter.CreateSignature(hashedFile);
-            Directory.CreateDirectory(@"C:\RSA\Encrypt\");
-            File.WriteAllBytes(encryptFolder + "Signature.txt", signedHashedValue);
+            File.WriteAllBytes(folderName + "Signature.txt", signedHashedValue);
         }
 
-        private static void EncryptFile(RSACryptoServiceProvider privateKey, string file)
+        private void EncryptFile(RSACryptoServiceProvider publicKey, string file, string folderName)
         {
             // Create a symetric key with AES (Rijndael)
             var rjndl = new RijndaelManaged {KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC};
             var transform = rjndl.CreateEncryptor();
             // Encrypt the key with the private key
-            var symKeyEncrypted = privateKey.Encrypt(rjndl.Key, false);
+            var symKeyEncrypted = publicKey.Encrypt(rjndl.Key, false);
 
             // Set variables to store the length values of the key and the Initialization Vector
             var lenKey = new byte[4];
@@ -114,17 +118,21 @@ namespace EncryptDecrypt
             lenIV = BitConverter.GetBytes(lIV);
 
             var startFileName = file.LastIndexOf("\\") + 1;
-            var outFileName = encryptFolder + file.Substring(startFileName, file.LastIndexOf(".") - startFileName) + ".enc";
+            var outFileName = folderName + file.Substring(startFileName, file.LastIndexOf(".") - startFileName) + ".enc";
 
+            // Write the encrypted symetric key and the IV in a separate file
+            using (var keyFileStream = new FileStream(folderName + "Key.txt", FileMode.Create))
+            {
+                keyFileStream.Write(lenKey, 0, 4);
+                keyFileStream.Write(lenIV, 0, 4);
+                keyFileStream.Write(symKeyEncrypted, 0, lKey);
+                keyFileStream.Write(rjndl.IV, 0, lIV);
+                keyFileStream.Close();
+            }
+
+            // Encrypt the file in a new file by using the symetric key
             using (var outFileStream = new FileStream(outFileName, FileMode.Create))
             {
-                // Write the encrypted symetric key and the IV at the beginning of the new encrypted file
-                // TO-DO: Write the encrypted symetric key in another separate file
-                outFileStream.Write(lenKey, 0, 4);
-                outFileStream.Write(lenIV, 0, 4);
-                outFileStream.Write(symKeyEncrypted, 0, lKey);
-                outFileStream.Write(rjndl.IV, 0, lIV);
-
                 using (var outStreamEncrypted = new CryptoStream(outFileStream, transform, CryptoStreamMode.Write))
                 {
                     var blockSizeInBytes = rjndl.BlockSize/8;
@@ -138,6 +146,7 @@ namespace EncryptDecrypt
                             count = inFileStream.Read(data, 0, blockSizeInBytes);
                             outStreamEncrypted.Write(data, 0, count);
                         } while (count > 0);
+
                         inFileStream.Close();
                         outStreamEncrypted.FlushFinalBlock();
                         outStreamEncrypted.Close();
@@ -145,6 +154,109 @@ namespace EncryptDecrypt
                     outFileStream.Close();
                 }
             }
+            ResultEncryptTextBox.Text = "Succès";
+            Process.Start(folderName);
+        }
+
+        private void OpenFileDecryptButton_Click(object sender, RoutedEventArgs e)
+        {
+            FileToDecryptTextBox.Text = GetFileName();
+        }
+
+        private void OpenKeyFileButton_Click(object sender, RoutedEventArgs e)
+        {
+            KeyFileTextBox.Text = GetFileName();
+        }
+
+        private void OpenSignatureFileButton_Click(object sender, RoutedEventArgs e)
+        {
+            SignatureFileTextBox.Text = GetFileName();
+        }
+
+        private void DecryptButton_Click(object sender, RoutedEventArgs e)
+        {
+            ResultDecryptTextBox.Text = "";
+            var filePath = FileToDecryptTextBox.Text;
+            if (filePath.Equals(""))
+            {
+                MessageBox.Show("Pas de fichier sélectionné", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+                ResultDecryptTextBox.Text = "Échec";
+                return;
+            }
+            var keyFilePath = KeyFileTextBox.Text;
+            if (keyFilePath.Equals(""))
+            {
+                MessageBox.Show("Pas de fichier de clé sélectionné", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+                ResultDecryptTextBox.Text = "Échec";
+                return;
+            }
+            var signatureFilePath = SignatureFileTextBox.Text;
+            if (signatureFilePath.Equals(""))
+            {
+                MessageBox.Show("Pas de fichier de signature sélectionné", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+                ResultDecryptTextBox.Text = "Échec";
+                return;
+            }
+            var privateKey = new RSACryptoServiceProvider();
+            try
+            {
+                privateKey.FromXmlString(PrivateKeyDecryptTextBox.Text);
+            }
+            catch (System.Security.XmlSyntaxException)
+            {
+                MessageBox.Show("Clé privée invalide.", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+                ResultDecryptTextBox.Text = "Échec";
+                return;
+            }
+            var publicKey = new RSACryptoServiceProvider();
+            try
+            {
+                publicKey.FromXmlString(PublicKeyDecryptTextBox.Text);
+            }
+            catch (System.Security.XmlSyntaxException)
+            {
+                MessageBox.Show("Clé publique invalide.", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+                ResultDecryptTextBox.Text = "Échec";
+                return;
+            }
+
+            var startFileName = filePath.LastIndexOf("\\") + 1;
+            var folderName = EncryptFolder +
+                             filePath.Substring(startFileName, filePath.LastIndexOf(".") - startFileName) + @"\";
+            Directory.CreateDirectory(folderName);
+
+        }
+
+        private ICryptoTransform DecryptKey(RSACryptoServiceProvider privateKey, string keyFile, string folderName)
+        {
+            var rjndl = new RijndaelManaged { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC };
+            var lenKey = new byte[4];
+            var lenIV = new byte[4];
+            ICryptoTransform transform;
+            using (var keyInFs = new FileStream(keyFile, FileMode.Open))
+            {
+                keyInFs.Seek(0, SeekOrigin.Begin);
+                keyInFs.Read(lenKey, 0, 3);
+                keyInFs.Seek(4, SeekOrigin.Begin);
+                keyInFs.Read(lenIV, 0, 3);
+
+                var lKey = BitConverter.ToInt32(lenKey, 0);
+                var lIV = BitConverter.ToInt32(lenIV, 0);
+
+                var encryptedKey = new byte[lKey];
+                var iv = new byte[lIV];
+
+                var decryptedKey = privateKey.Decrypt(encryptedKey, false);
+                transform = rjndl.CreateDecryptor(decryptedKey, iv);
+            }
+            return transform;
+        }
+
+        private static string GetFileName()
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog();
+            var result = dlg.ShowDialog();
+            return result == true ? dlg.FileName : "";
         }
     }
 }

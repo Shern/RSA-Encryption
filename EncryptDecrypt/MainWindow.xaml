@@ -26,15 +26,36 @@
                     <TextBox x:Name="FileToEncryptTextBox" HorizontalAlignment="Left" Height="23" Margin="117,69,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558"/>
                     <TextBlock HorizontalAlignment="Left" Margin="22,73,0,0" TextWrapping="Wrap" Text="Fichier à chiffrer :" VerticalAlignment="Top" Height="19" TextAlignment="Right"/>
                     <Button x:Name="OpenFileEncryptButton" Content="Ouvrir" HorizontalAlignment="Left" Margin="680,69,0,0" VerticalAlignment="Top" Width="75" Click="OpenFileEncryptButton_Click" Height="23"/>
-                    <TextBox x:Name="PublicKeyEncryptTextBox" HorizontalAlignment="Left" Height="60" Margin="116,125,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+                    <TextBox x:Name="PublicKeyEncryptTextBox" HorizontalAlignment="Left" Height="60" Margin="116,125,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+         ScrollViewer.VerticalScrollBarVisibility="Auto" />
                     <TextBlock HorizontalAlignment="Left" Margin="21,135,0,0" TextWrapping="Wrap" Text="Clé publique du destinataire :" VerticalAlignment="Top" Width="90" TextAlignment="Right"/>
-                    <TextBox x:Name="PrivateKeyEncryptTextBox" HorizontalAlignment="Left" Height="60" Margin="116,212,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+                    <TextBox x:Name="PrivateKeyEncryptTextBox" HorizontalAlignment="Left" Height="60" Margin="116,212,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+         ScrollViewer.VerticalScrollBarVisibility="Auto" />
                     <TextBlock HorizontalAlignment="Left" Margin="9,233,0,0" TextWrapping="Wrap" Text="Votre clé privée :" VerticalAlignment="Top" Height="19" Width="102" TextAlignment="Right"/>
                     <Button x:Name="EncryptButton" Content="Chiffrer" HorizontalAlignment="Left" Margin="336,295,0,0" VerticalAlignment="Top" Width="138" Height="41" FontSize="18" Click="EncryptButton_Click"/>
+                    <TextBlock x:Name="ResultEncryptTextBox" HorizontalAlignment="Left" Margin="303,360,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="55" Width="200" TextAlignment="Center" FontSize="36"/>
                 </Grid>
             </TabItem>
             <TabItem Header="Déchiffrer">
-                <Grid Background="#FFE5E5E5"/>
+                <Grid Background="#FFE5E5E5">
+                    <TextBox x:Name="FileToDecryptTextBox" HorizontalAlignment="Left" Height="23" Margin="112,47,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" Grid.ColumnSpan="2"/>
+                    <TextBlock HorizontalAlignment="Left" Margin="4,51,0,0" TextWrapping="Wrap" Text="Fichier à déchiffrer :" VerticalAlignment="Top" Height="19" TextAlignment="Right"/>
+                    <Button x:Name="OpenFileDecryptButton" Content="Ouvrir" HorizontalAlignment="Left" Margin="675,47,0,0" VerticalAlignment="Top" Width="75" Click="OpenFileDecryptButton_Click" Height="23"/>
+                    <TextBox x:Name="KeyFileTextBox" HorizontalAlignment="Left" Height="23" Margin="112,87,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" Grid.ColumnSpan="2"/>
+                    <TextBlock HorizontalAlignment="Left" Margin="22,91,0,0" TextWrapping="Wrap" Text="Clé symétrique :" VerticalAlignment="Top" Height="19" TextAlignment="Right"/>
+                    <Button x:Name="KeyOpenFileButton" Content="Ouvrir" HorizontalAlignment="Left" Margin="675,87,0,0" VerticalAlignment="Top" Width="75" Click="OpenKeyFileButton_Click" Height="23"/>
+                    <TextBox x:Name="SignatureFileTextBox" HorizontalAlignment="Left" Height="23" Margin="112,128,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" Grid.ColumnSpan="2"/>
+                    <TextBlock HorizontalAlignment="Left" Margin="51,132,0,0" TextWrapping="Wrap" Text="Signature :" VerticalAlignment="Top" Height="19" TextAlignment="Right"/>
+                    <Button x:Name="SignatureOpenFileButton" Content="Ouvrir" HorizontalAlignment="Left" Margin="675,128,0,0" VerticalAlignment="Top" Width="75" Click="OpenSignatureFileButton_Click" Height="23"/>
+                    <TextBox x:Name="PublicKeyDecryptTextBox" HorizontalAlignment="Left" Height="60" Margin="112,170,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+         ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                    <TextBlock HorizontalAlignment="Left" Margin="17,182,0,0" TextWrapping="Wrap" Text="Clé publique de l'expéditeur :" VerticalAlignment="Top" Width="90" TextAlignment="Right"/>
+                    <TextBox x:Name="PrivateKeyDecryptTextBox" HorizontalAlignment="Left" Height="60" Margin="112,248,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="558" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                    	ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                    <TextBlock HorizontalAlignment="Left" Margin="17,261,0,0" TextWrapping="Wrap" Text="Votre clé privée :" VerticalAlignment="Top" Width="90" TextAlignment="Right"/>
+                    <Button x:Name="DecryptButton" Content="Déchiffrer" HorizontalAlignment="Left" Margin="319,316,0,0" VerticalAlignment="Top" Width="138" Height="41" FontSize="18" Click="DecryptButton_Click"/>
+                    <TextBlock x:Name="ResultDecryptTextBox" HorizontalAlignment="Left" Margin="286,362,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="55" Width="200" TextAlignment="Center" FontSize="36"/>
+                </Grid>
             </TabItem>
         </TabControl>
         <Button x:Name="CloseButton" Content="Fermer" HorizontalAlignment="Left" Margin="689,529,0,0" VerticalAlignment="Top" Width="75" Click="CloseButton_Click"/>
