@@ -59,10 +59,10 @@ namespace EncryptDecrypt
                 ResultEncryptTextBox.Text = "Échec";
                 return;
             }
-            var privateKey = new RSACryptoServiceProvider();
+            var privateKeyAlice = new RSACryptoServiceProvider();
             try
             {
-                privateKey.FromXmlString(PrivateKeyEncryptTextBox.Text);
+                privateKeyAlice.FromXmlString(PrivateKeyEncryptTextBox.Text);
             }
             catch (System.Security.XmlSyntaxException)
             {
@@ -70,10 +70,10 @@ namespace EncryptDecrypt
                 ResultEncryptTextBox.Text = "Échec";
                 return;
             }
-            var publicKey = new RSACryptoServiceProvider();
+            var publicKeyBob = new RSACryptoServiceProvider();
             try
             {
-                publicKey.FromXmlString(PublicKeyEncryptTextBox.Text);
+                publicKeyBob.FromXmlString(PublicKeyEncryptTextBox.Text);
             }
             catch (System.Security.XmlSyntaxException)
             {
@@ -86,16 +86,16 @@ namespace EncryptDecrypt
             var folderName = EncryptFolder +
                              filePath.Substring(startFileName, filePath.LastIndexOf(".") - startFileName) + @"\";
             Directory.CreateDirectory(folderName);
-            HashFile(privateKey, filePath, folderName);
-            EncryptFile(publicKey, FileToEncryptTextBox.Text, folderName);
+            HashFile(privateKeyAlice, filePath, folderName);
+            EncryptFile(publicKeyBob, FileToEncryptTextBox.Text, folderName);
         }
 
-        private static void HashFile(RSACryptoServiceProvider privateKey, string file, string folderName)
+        private static void HashFile(RSACryptoServiceProvider privateKeyAlice, string file, string folderName)
         {
             var fileBytes = File.ReadAllBytes(file);
             SHA256 sha256 = new SHA256Managed();
             var hashedFile = sha256.ComputeHash(fileBytes);
-            var rsaFormatter = new RSAPKCS1SignatureFormatter(privateKey);
+            var rsaFormatter = new RSAPKCS1SignatureFormatter(privateKeyAlice);
             rsaFormatter.SetHashAlgorithm("SHA256");
             var signedHashedValue = rsaFormatter.CreateSignature(hashedFile);
             File.WriteAllBytes(folderName + "Signature.txt", signedHashedValue);
@@ -221,13 +221,25 @@ namespace EncryptDecrypt
             }
 
             var startFileName = filePath.LastIndexOf("\\") + 1;
-            var folderName = EncryptFolder +
+            var folderName = DecryptFolder +
                              filePath.Substring(startFileName, filePath.LastIndexOf(".") - startFileName) + @"\";
             Directory.CreateDirectory(folderName);
-
+            var key = DecryptKey(privateKey, keyFilePath);
+            var decryptedFilePath = DecryptFile(key, filePath, folderName);
+            var isSignatureValid = VerifySignature(publicKey, decryptedFilePath, signatureFilePath);
+            if (isSignatureValid)
+            {
+                ResultDecryptTextBox.Text = "Succès";
+                Process.Start(folderName);
+            }
+            else
+            {
+                MessageBox.Show("La signature est invalide (le fichier a peut-être été modifié).", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+                ResultEncryptTextBox.Text = "Échec";
+            }
         }
 
-        private ICryptoTransform DecryptKey(RSACryptoServiceProvider privateKey, string keyFile, string folderName)
+        private static ICryptoTransform DecryptKey(RSACryptoServiceProvider privateKey, string keyFile)
         {
             var rjndl = new RijndaelManaged { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC };
             var lenKey = new byte[4];
@@ -246,10 +258,61 @@ namespace EncryptDecrypt
                 var encryptedKey = new byte[lKey];
                 var iv = new byte[lIV];
 
+                keyInFs.Seek(8, SeekOrigin.Begin);
+                keyInFs.Read(encryptedKey, 0, lKey);
+                keyInFs.Seek(8 + lKey, SeekOrigin.Begin);
+                keyInFs.Read(iv, 0, lIV);
+
                 var decryptedKey = privateKey.Decrypt(encryptedKey, false);
                 transform = rjndl.CreateDecryptor(decryptedKey, iv);
             }
             return transform;
+        }
+
+        private static string DecryptFile(ICryptoTransform key, string file, string folderName)
+        {
+            var startFileName = file.LastIndexOf("\\") + 1;
+            var outFileName = folderName + file.Substring(startFileName, file.LastIndexOf(".") - startFileName) + ".txt";
+
+            using (var inFs = new FileStream(file, FileMode.Open))
+            {
+                using (var outFs = new FileStream(outFileName, FileMode.Create))
+                {
+                    var blockSizeBytes = key.InputBlockSize / 8;
+                    var data = new byte[blockSizeBytes];
+
+                    inFs.Seek(0, SeekOrigin.Begin);
+
+                    using (var outStreamDecrypted = new CryptoStream(outFs, key, CryptoStreamMode.Write))
+                    {
+                        int count;
+                        do
+                        {
+                            count = inFs.Read(data, 0, blockSizeBytes);
+                            outStreamDecrypted.Write(data, 0, count);
+
+                        }
+                        while (count > 0);
+
+                        outStreamDecrypted.FlushFinalBlock();
+                        outStreamDecrypted.Close();
+                    }
+                    outFs.Close();
+                }
+                inFs.Close();
+            }
+            return outFileName;
+        }
+
+        private static bool VerifySignature(RSACryptoServiceProvider publicKey, string file, string signatureFile)
+        {
+            var fileBytes = File.ReadAllBytes(file);
+            SHA256 sha256 = new SHA256Managed();
+            var hashedFile = sha256.ComputeHash(fileBytes);
+            var signatureBytes = File.ReadAllBytes(signatureFile);
+            var rsaDeformatter = new RSAPKCS1SignatureDeformatter(publicKey);
+            rsaDeformatter.SetHashAlgorithm("SHA256");
+            return rsaDeformatter.VerifySignature(hashedFile, signatureBytes);
         }
 
         private static string GetFileName()
