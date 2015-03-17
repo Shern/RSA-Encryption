@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using System.Security.Policy;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace EncryptDecrypt
 {
@@ -13,8 +12,8 @@ namespace EncryptDecrypt
     /// </summary>
     public partial class MainWindow : Window
     {
-        private const string EncryptFolder = @"C:\RSA\Encrypt\";
-        private const string DecryptFolder = @"C:\RSA\Decrypt\";
+        private const string EncryptFolder = @"C:\CSI4539\Encrypt\";
+        private const string DecryptFolder = @"C:\CSI4539\Decrypt\";
 
         public MainWindow()
         {
@@ -26,9 +25,16 @@ namespace EncryptDecrypt
             Close();
         }
 
+        #region Generate Key Tab
+
+        /// <summary>
+        /// Generate a RSA key of size 2048 and display the public key and the private key in the corresponding text boxes
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void GenerateButton_Click(object sender, RoutedEventArgs e)
         {
-            var rsaKey = new RSACryptoServiceProvider() {PersistKeyInCsp = false};
+            var rsaKey = new RSACryptoServiceProvider(2048) {PersistKeyInCsp = false};
             KeySizeTextBlock.Text = rsaKey.KeySize.ToString();
             PublicKeyGenTextBox.Text = rsaKey.ToXmlString(false);
             PrivateKeyGenTextBox.Text = rsaKey.ToXmlString(true);
@@ -44,41 +50,48 @@ namespace EncryptDecrypt
             Clipboard.SetText(PrivateKeyGenTextBox.Text);
         }
 
+        #endregion
+
+        #region Encrypt Tab
+
         private void OpenFileEncryptButton_Click(object sender, RoutedEventArgs e)
         {
             FileToEncryptTextBox.Text = GetFileName();
         }
 
+        /// <summary>
+        /// Start the encryption process. Verify if keys are valid. Files are created in C:\CSI4539\Encrypt\file-name\ .
+        /// The files produced are the encrypted file (with a .enc extension), key.txt and signature.txt.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void EncryptButton_Click(object sender, RoutedEventArgs e)
         {
             ResultEncryptTextBox.Text = "";
             var filePath = FileToEncryptTextBox.Text;
             if (filePath.Equals(""))
             {
-                MessageBox.Show("Pas de fichier sélectionné", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                ResultEncryptTextBox.Text = "Échec";
+                ShowErrorDialog("Pas de fichier sélectionné.", ResultEncryptTextBox);
                 return;
             }
-            var privateKeyAlice = new RSACryptoServiceProvider();
+            var privateKey = new RSACryptoServiceProvider();
             try
             {
-                privateKeyAlice.FromXmlString(PrivateKeyEncryptTextBox.Text);
+                privateKey.FromXmlString(PrivateKeyEncryptTextBox.Text);
             }
             catch (System.Security.XmlSyntaxException)
             {
-                MessageBox.Show("Clé privée invalide.", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                ResultEncryptTextBox.Text = "Échec";
+                ShowErrorDialog("Clé privée invalide.", ResultEncryptTextBox);
                 return;
             }
-            var publicKeyBob = new RSACryptoServiceProvider();
+            var publicKey = new RSACryptoServiceProvider();
             try
             {
-                publicKeyBob.FromXmlString(PublicKeyEncryptTextBox.Text);
+                publicKey.FromXmlString(PublicKeyEncryptTextBox.Text);
             }
             catch (System.Security.XmlSyntaxException)
             {
-                MessageBox.Show("Clé publique invalide.", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                ResultEncryptTextBox.Text = "Échec";
+                ShowErrorDialog("Clé public invalide.", ResultEncryptTextBox);
                 return;
             }
             
@@ -86,21 +99,36 @@ namespace EncryptDecrypt
             var folderName = EncryptFolder +
                              filePath.Substring(startFileName, filePath.LastIndexOf(".") - startFileName) + @"\";
             Directory.CreateDirectory(folderName);
-            HashFile(privateKeyAlice, filePath, folderName);
-            EncryptFile(publicKeyBob, FileToEncryptTextBox.Text, folderName);
+            HashFile(privateKey, filePath, folderName);
+            EncryptFile(publicKey, FileToEncryptTextBox.Text, folderName);
         }
 
-        private static void HashFile(RSACryptoServiceProvider privateKeyAlice, string file, string folderName)
+        /// <summary>
+        /// Hash the file and generated a signature file by encrypting the hash with the private key.
+        /// </summary>
+        /// <param name="privateKey">The private key of the sender.</param>
+        /// <param name="file">The path to the file to hash.</param>
+        /// <param name="folderName">The folder in which the signature file is saved.</param>
+        private static void HashFile(AsymmetricAlgorithm privateKey, string file, string folderName)
         {
             var fileBytes = File.ReadAllBytes(file);
             SHA256 sha256 = new SHA256Managed();
             var hashedFile = sha256.ComputeHash(fileBytes);
-            var rsaFormatter = new RSAPKCS1SignatureFormatter(privateKeyAlice);
+            var rsaFormatter = new RSAPKCS1SignatureFormatter(privateKey);
             rsaFormatter.SetHashAlgorithm("SHA256");
             var signedHashedValue = rsaFormatter.CreateSignature(hashedFile);
             File.WriteAllBytes(folderName + "Signature.txt", signedHashedValue);
         }
 
+        /// <summary>
+        /// Generates a random symmetric Rijndael key and encrypt it with the public key of the receiver. 
+        /// Saves this encrypted key with the IV in key.txt. After that, encrypts the file with the symmetric key
+        /// by using the Rijndael algorithm with a block and key sizes of 256 bits and using the Cipher-Block Chaining 
+        /// cipher mode.
+        /// </summary>
+        /// <param name="publicKey">The public key of the receiver.</param>
+        /// <param name="file">The path to the file to encrypt.</param>
+        /// <param name="folderName">The folder in which the key file and the encrypted file are saved.</param>
         private void EncryptFile(RSACryptoServiceProvider publicKey, string file, string folderName)
         {
             // Create a symetric key with AES (Rijndael)
@@ -130,7 +158,7 @@ namespace EncryptDecrypt
                 keyFileStream.Close();
             }
 
-            // Encrypt the file in a new file by using the symetric key
+            // Encrypt the file in a new file by using the symmetric key
             using (var outFileStream = new FileStream(outFileName, FileMode.Create))
             {
                 using (var outStreamEncrypted = new CryptoStream(outFileStream, transform, CryptoStreamMode.Write))
@@ -158,6 +186,10 @@ namespace EncryptDecrypt
             Process.Start(folderName);
         }
 
+        #endregion
+
+        #region Decrypt Tab
+
         private void OpenFileDecryptButton_Click(object sender, RoutedEventArgs e)
         {
             FileToDecryptTextBox.Text = GetFileName();
@@ -173,28 +205,31 @@ namespace EncryptDecrypt
             SignatureFileTextBox.Text = GetFileName();
         }
 
+        /// <summary>
+        /// Start the decryptioin process. Verifies the files and the keys inputed but not completely. 
+        /// Decrypts the key, then decrypts the file, and verify the signature after that.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void DecryptButton_Click(object sender, RoutedEventArgs e)
         {
             ResultDecryptTextBox.Text = "";
             var filePath = FileToDecryptTextBox.Text;
             if (filePath.Equals(""))
             {
-                MessageBox.Show("Pas de fichier sélectionné", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                ResultDecryptTextBox.Text = "Échec";
+                ShowErrorDialog("Pas de fichier sélectionné.", ResultDecryptTextBox);
                 return;
             }
             var keyFilePath = KeyFileTextBox.Text;
             if (keyFilePath.Equals(""))
             {
-                MessageBox.Show("Pas de fichier de clé sélectionné", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                ResultDecryptTextBox.Text = "Échec";
+                ShowErrorDialog("Pas de fichier de clé sélectionné.", ResultDecryptTextBox);
                 return;
             }
             var signatureFilePath = SignatureFileTextBox.Text;
             if (signatureFilePath.Equals(""))
             {
-                MessageBox.Show("Pas de fichier de signature sélectionné", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                ResultDecryptTextBox.Text = "Échec";
+                ShowErrorDialog("Pas de fichier de signature sélectionné.", ResultDecryptTextBox);
                 return;
             }
             var privateKey = new RSACryptoServiceProvider();
@@ -204,8 +239,7 @@ namespace EncryptDecrypt
             }
             catch (System.Security.XmlSyntaxException)
             {
-                MessageBox.Show("Clé privée invalide.", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                ResultDecryptTextBox.Text = "Échec";
+                ShowErrorDialog("Clé privée invalide.", ResultDecryptTextBox);
                 return;
             }
             var publicKey = new RSACryptoServiceProvider();
@@ -215,18 +249,48 @@ namespace EncryptDecrypt
             }
             catch (System.Security.XmlSyntaxException)
             {
-                MessageBox.Show("Clé publique invalide.", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                ResultDecryptTextBox.Text = "Échec";
+                ShowErrorDialog("Clé publique invalide.", ResultDecryptTextBox);
                 return;
             }
 
             var startFileName = filePath.LastIndexOf("\\") + 1;
-            var folderName = DecryptFolder +
-                             filePath.Substring(startFileName, filePath.LastIndexOf(".") - startFileName) + @"\";
+            var folderName = DecryptFolder + filePath.Substring(startFileName, filePath.LastIndexOf(".") - startFileName) + @"\";
             Directory.CreateDirectory(folderName);
-            var key = DecryptKey(privateKey, keyFilePath);
-            var decryptedFilePath = DecryptFile(key, filePath, folderName);
-            var isSignatureValid = VerifySignature(publicKey, decryptedFilePath, signatureFilePath);
+
+            // Get the decrypted key
+            bool isSignatureValid;
+            try
+            {
+                var key = DecryptKey(privateKey, keyFilePath);
+
+                // Get the path of the decrypted file
+                try
+                {
+                    var decryptedFilePath = DecryptFile(key, filePath, folderName);
+
+                    // Verify if the hash of the decrypted file is the same as the decrypted signature
+                    try
+                    {
+                        isSignatureValid = VerifySignature(publicKey, decryptedFilePath, signatureFilePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        ShowErrorDialog("Le fichier de signature est invalide.", ResultDecryptTextBox);
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ShowErrorDialog("Erreur lors du déchiffrement du fichier.", ResultDecryptTextBox);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowErrorDialog("Le fichier de clé est invalide.", ResultDecryptTextBox);
+                return;
+            }
+
             if (isSignatureValid)
             {
                 ResultDecryptTextBox.Text = "Succès";
@@ -234,11 +298,16 @@ namespace EncryptDecrypt
             }
             else
             {
-                MessageBox.Show("La signature est invalide (le fichier a peut-être été modifié).", "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                ResultEncryptTextBox.Text = "Échec";
+                ShowErrorDialog("La signature est invalide (le fichier a peut-être été modifié).", ResultDecryptTextBox);
             }
         }
 
+        /// <summary>
+        /// Decrypt the key contained in the key.txt file. 
+        /// </summary>
+        /// <param name="privateKey">The private key of the receiver.</param>
+        /// <param name="keyFile">The path to the key.txt file.</param>
+        /// <returns>An ICryptoTransform object initiated with the key and the IV contained in key.txt.</returns>
         private static ICryptoTransform DecryptKey(RSACryptoServiceProvider privateKey, string keyFile)
         {
             var rjndl = new RijndaelManaged { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC };
@@ -269,6 +338,13 @@ namespace EncryptDecrypt
             return transform;
         }
 
+        /// <summary>
+        /// Decrypts the file and save the decrypted file in ..\file-name\file-name.txt
+        /// </summary>
+        /// <param name="key">The symmetric key and the IV in a ICryptoTransform object.</param>
+        /// <param name="file">The path the to encrypted file.</param>
+        /// <param name="folderName">The folder in which the decrypted file is to be saved.</param>
+        /// <returns>The path to the decrypted file.</returns>
         private static string DecryptFile(ICryptoTransform key, string file, string folderName)
         {
             var startFileName = file.LastIndexOf("\\") + 1;
@@ -304,7 +380,14 @@ namespace EncryptDecrypt
             return outFileName;
         }
 
-        private static bool VerifySignature(RSACryptoServiceProvider publicKey, string file, string signatureFile)
+        /// <summary>
+        /// Verifies the signature by hashing the decrypted file and comparing the hash with the decrypted signature sent by the sender.
+        /// </summary>
+        /// <param name="publicKey">The public key of the sender.</param>
+        /// <param name="file">The path to the decrypted file.</param>
+        /// <param name="signatureFile">The path to the signature sent by the sender.</param>
+        /// <returns>Indicates if the signature is the same.</returns>
+        private static bool VerifySignature(AsymmetricAlgorithm publicKey, string file, string signatureFile)
         {
             var fileBytes = File.ReadAllBytes(file);
             SHA256 sha256 = new SHA256Managed();
@@ -315,11 +398,23 @@ namespace EncryptDecrypt
             return rsaDeformatter.VerifySignature(hashedFile, signatureBytes);
         }
 
+        #endregion
+
+        /// <summary>
+        /// Open a OpenFileDialog.
+        /// </summary>
+        /// <returns>The path to the selected file.</returns>
         private static string GetFileName()
         {
             var dlg = new Microsoft.Win32.OpenFileDialog();
             var result = dlg.ShowDialog();
             return result == true ? dlg.FileName : "";
+        }
+
+        private static void ShowErrorDialog(string errorMessage, TextBlock resultTextBlock)
+        {
+            MessageBox.Show(errorMessage, "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
+            resultTextBlock.Text = "Échec";
         }
     }
 }
